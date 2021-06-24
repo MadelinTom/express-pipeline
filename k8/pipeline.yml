@@ -59,7 +59,7 @@ spec:
         - run-tests
       params:
         - name: IMAGE
-          value: "$(params.image-repo):$(tasks.clone-repository.results.commit)"
+          value: "$(params.image-repo)"
         - name: TLSVERIFY
           value: "false"
       taskRef:
@@ -77,7 +77,7 @@ spec:
     #     - name: app-name
     #       value: foo-name
     #     - name: image-with-tag
-    #       value: "$(params.image-repo):$(tasks.clone-repository.results.commit)"
+    #       value: "$(params.image-repo)"
     #   taskRef:
     #     kind: Task
     #     name: kustomize-build
@@ -106,7 +106,7 @@ spec:
     #     name: gitops
     #   params:
     #     - name: docker-image
-    #       value: "$(params.image-repo):$(tasks.clone-repository.results.commit)"
+    #       value: "$(params.image-repo)"
     #     - name: gitops-repo
     #       value: "https://github.com/matejocovskyibm/express-sample-app-gitops"
     #   workspaces:
