@@ -1,0 +1,23 @@
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  name: pfs-pipeline-run
+  generateName: pfs-run-
+spec:
+  pipelineRef:
+    name: pfs-pipeline
+  serviceAccountName: pipeline
+  params:
+    - name: source-repo
+      value: https://github.com/cloud-native-garage-method-cohort/tom-buildah-assignment
+    - name: image-repo
+      value: quay.io/tommy_madelin/express-sample-app:$(tasks.clone-repository.results.commit)
+  workspaces:
+    - name: pfs-shared-data
+      volumeClaimTemplate:
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 1Gi

@@ -1,0 +1,114 @@
+# pipeline.yaml
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  annotations:
+    app.openshift.io/runtime: nodejs
+  name: pfs-pipeline
+spec:
+  params:
+    - name: source-repo
+      type: string
+      description: Source repository name
+      default: https://github.com/cloud-native-garage-method-cohort/tom-buildah-assignment
+    - name: image-repo
+      type: string
+      description: Docker image name
+      default: quay.io/tommy_madelin/express-sample-app:$(tasks.clone-repository.results.commit)
+  workspaces:
+    - name: pfs-shared-data
+      description: |
+        This workspace stores the cloned repository and is available to all steps
+  tasks:
+    - name: clone-repository # GIT CLONE
+      params:
+        - name: url
+          value: "$(params.source-repo)"
+      taskRef:
+        kind: ClusterTask
+        name: git-clone
+      workspaces:
+        - name: output
+          workspace: pfs-shared-data
+    - name: install-dependencies # NPM INSTALL
+      runAfter:
+        - clone-repository
+      taskRef:
+        name: npm
+      workspaces:
+        - name: source
+          workspace: pfs-shared-data
+      params:
+        - name: ARGS
+          value:
+            - clean-install
+    - name: run-tests # NPM TEST
+      runAfter:
+        - install-dependencies
+      taskRef:
+        name: npm
+      workspaces:
+        - name: source
+          workspace: pfs-shared-data
+      params:
+        - name: ARGS
+          value:
+            - test
+    - name: build-image # BUILD IMAGE
+      runAfter:
+        - run-tests
+      params:
+        - name: IMAGE
+          value: "$(params.image-repo):$(tasks.clone-repository.results.commit)"
+        - name: TLSVERIFY
+          value: "false"
+      taskRef:
+        kind: ClusterTask
+        name: buildah
+      workspaces:
+        - name: source
+          workspace: pfs-shared-data
+    # - name: kustomize-build # KUSTOMIZE
+    #   runAfter:
+    #     - build-image
+    #   params:
+    #     - name: app-namespace
+    #       value: tom-pipeline
+    #     - name: app-name
+    #       value: foo-name
+    #     - name: image-with-tag
+    #       value: "$(params.image-repo):$(tasks.clone-repository.results.commit)"
+    #   taskRef:
+    #     kind: Task
+    #     name: kustomize-build
+    #   workspaces:
+    #     - name: source
+    #       workspace: pfs-shared-data
+    - name: test-deploy
+      runAfter:
+        - build-image
+      params:
+        - name: app-namespace
+          value: tom-pipeline
+        - name: app-name
+          value: foo-name
+      taskRef:
+        kind: Task
+        name: test-deploy
+      workspaces:
+        - name: source
+          workspace: pfs-shared-data
+    # - name: gitops
+    #   runAfter:
+    #     - test-deploy
+    #   taskRef:
+    #     kind: Task
+    #     name: gitops
+    #   params:
+    #     - name: docker-image
+    #       value: "$(params.image-repo):$(tasks.clone-repository.results.commit)"
+    #     - name: gitops-repo
+    #       value: "https://github.com/matejocovskyibm/express-sample-app-gitops"
+    #   workspaces:
+    #     - name: output
+    #       workspace: pfs-shared-data
